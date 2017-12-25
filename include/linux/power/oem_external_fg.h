@@ -112,6 +112,4 @@ extern bool get_oem_charge_done_status(void);
 extern int load_soc(void);
 extern void backup_soc_ex(int soc);
 extern void clean_backup_soc_ex(void);
-extern bool dash_adapter_update_is_tx_gpio(unsigned long gpio_num);
-extern bool dash_adapter_update_is_rx_gpio(unsigned long gpio_num);
 #endif
