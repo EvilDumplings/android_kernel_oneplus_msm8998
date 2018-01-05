@@ -9,10 +9,6 @@ menuconfig INPUT_FINGERPRINT
 
 if INPUT_FINGERPRINT
 
-config FINGERPRINT_DETECT
-	tristate "fingerprint detect support"
-	depends on SPI_MASTER
-
 config FINGERPRINT_GOODIX
 	tristate "goodix fingerprint sensor support"
 	depends on SPI_MASTER
