@@ -21,6 +21,17 @@ export ARCH=arm64;
 export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/aarch64-linux-android-;
 
 
+# # # VERIFY TOOLCHAIN PRESENCE # # #
+
+if [ ! -d "$BUILD_CROSS_COMPILE" ]; then
+  git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 $BUILD_CROSS_COMPILE;
+else
+  cd $BUILD_CROSS_COMPILE;
+  git pull;
+  cd $BUILD_KERNEL_DIR;
+fi;
+
+
 # # # CLEAN BUILD OUTPUT # # #
 
 rm -rf $BUILD_KERNEL_OUT_DIR;
