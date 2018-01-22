@@ -6,11 +6,12 @@ BUILD_KERNEL_DIR=`pwd`;
 BUILD_ROOT_DIR=$(dirname $BUILD_KERNEL_DIR);
 PRODUCT_OUT=$BUILD_ROOT_DIR/out;
 BUILD_KERNEL_OUT_DIR=$PRODUCT_OUT/KERNEL_OBJ;
+BUILD_ZIP_DIR=$PRODUCT_OUT/AnyKernel2;
 
 BUILD_CROSS_COMPILE=$BUILD_ROOT_DIR/aarch64-linux-android-4.9;
 
-KERNEL_IMG=$PRODUCT_OUT/Image.gz-dtb;
-KERNEL_MODULES=$PRODUCT_OUT/modules/system/vendor/lib/modules;
+KERNEL_IMG=$BUILD_ZIP_DIR/Image.gz-dtb;
+KERNEL_MODULES=$BUILD_ZIP_DIR/modules/system/vendor/lib/modules;
 
 BUILD_JOB_NUMBER=`nproc --all`;
 
@@ -32,11 +33,23 @@ else
 fi;
 
 
+# # # VERIFY ZIP TEMPLATE PRESENCE # # #
+
+if [ ! -d "$BUILD_ZIP_DIR" ]; then
+  git clone https://github.com/EvilDumplings/AnyKernel2.git $BUILD_ZIP_DIR;
+else
+  cd $BUILD_ZIP_DIR;
+  git pull;
+  cd $BUILD_KERNEL_DIR;
+fi;
+
+
 # # # CLEAN BUILD OUTPUT # # #
 
 rm -rf $BUILD_KERNEL_OUT_DIR;
 rm -f $KERNEL_IMG;
-rm -rf $KERNEL_MODULES;
+rm -rf $KERNEL_MODULES/*;
+rm -rf $PRODUCT_OUT/*.zip;
 
 
 # # # BUILD CONFIG AND KERNEL # # #
@@ -59,9 +72,15 @@ find $BUILD_KERNEL_OUT_DIR \
 
 # # # COPY BUILD OUTPUT # # #
 
-mkdir -p $KERNEL_MODULES;
-
 cp $BUILD_KERNEL_OUT_DIR/arch/arm64/boot/Image.gz-dtb $KERNEL_IMG;
 find $BUILD_KERNEL_OUT_DIR \
     -name "*.ko" \
     -exec cp {} $KERNEL_MODULES \;
+
+
+# # # BUILD ZIP # # #
+
+cd $BUILD_ZIP_DIR;
+zip -r9 $PRODUCT_OUT/primal-oneplus5-custom-v1.0.0.zip * \
+    -x patch/* ramdisk/* *.placeholder
+cd $BUILD_KERNEL_DIR;
