@@ -14,6 +14,7 @@ KERNEL_IMG=$BUILD_ZIP_DIR/Image.gz-dtb;
 KERNEL_MODULES=$BUILD_ZIP_DIR/modules/system/vendor/lib/modules;
 
 BUILD_JOB_NUMBER=`nproc --all`;
+HOST_ARCH=`uname -m`;
 
 
 # # # SET KERNEL ID # # #
@@ -28,7 +29,9 @@ PRODUCT_VERSION=1.0.0
 # # # SET GLOBAL VARIABLES # # #
 
 export ARCH=arm64;
-export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/aarch64-linux-android-;
+if [ "$HOST_ARCH" == "x86_64" ]; then
+  export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/aarch64-linux-android-;
+fi;
 
 export LOCALVERSION=-$PRODUCT_NAME_DISPLAY-$PRODUCT_VERSION
 
@@ -134,7 +137,9 @@ FUNC_BUILD_ZIP()
 
 # MAIN FUNCTION
 (
-  FUNC_VERIFY_TOOLCHAIN;
+  if [ "$HOST_ARCH" == "x86_64" ]; then
+    FUNC_VERIFY_TOOLCHAIN;
+  fi;
   FUNC_VERIFY_TEMPLATE;
   FUNC_CLEAN_OUTPUT;
   FUNC_BUILD;
