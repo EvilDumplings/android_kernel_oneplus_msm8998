@@ -38,7 +38,8 @@ export LOCALVERSION=-$PRODUCT_NAME_DISPLAY-$PRODUCT_VERSION
 FUNC_VERIFY_TOOLCHAIN()
 {
   if [ ! -d "$BUILD_CROSS_COMPILE" ]; then
-    git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 $BUILD_CROSS_COMPILE;
+    git clone https://source.codeaurora.org/quic/la/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 $BUILD_CROSS_COMPILE \
+        -b android-framework.lnx.2.9.1.r2-rel;
   else
     cd $BUILD_CROSS_COMPILE;
     git pull;
@@ -52,7 +53,8 @@ FUNC_VERIFY_TOOLCHAIN()
 FUNC_VERIFY_TEMPLATE()
 {
   if [ ! -d "$BUILD_ZIP_DIR" ]; then
-    git clone https://github.com/EvilDumplings/AnyKernel2.git $BUILD_ZIP_DIR;
+    git clone https://github.com/EvilDumplings/AnyKernel2.git $BUILD_ZIP_DIR \
+        -b oreo-mr1;
   else
     cd $BUILD_ZIP_DIR;
     git pull;
