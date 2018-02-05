@@ -68,7 +68,7 @@ FUNC_BUILD()
   mkdir -p $BUILD_KERNEL_OUT_DIR;
 
   make O=$BUILD_KERNEL_OUT_DIR primal_oneplus5_defconfig;
-  make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER;
+  make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit -1;
 }
 
 
