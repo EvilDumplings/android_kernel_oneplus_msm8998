@@ -69,7 +69,9 @@ FUNC_CLEAN_OUTPUT()
 {
   rm -rf $BUILD_KERNEL_OUT_DIR;
   rm -f $KERNEL_IMG;
-  rm -rf $KERNEL_MODULES/*;
+  if [ "$PRODUCT_PLATFORM" == "oos" ]; then
+    rm -rf $KERNEL_MODULES/*;
+  fi;
   rm -rf $PRODUCT_OUT/*.zip;
 }
 
@@ -119,9 +121,14 @@ FUNC_COPY_MODULES()
 
 FUNC_BUILD_ZIP()
 {
+  BUILD_ZIP_IGNORED="patch/* ramdisk/* *.placeholder";
+  if [ "$PRODUCT_PLATFORM" == "custom" ]; then
+    BUILD_ZIP_IGNORED="modules/* $BUILD_ZIP_IGNORED";
+  fi;
+  
   cd $BUILD_ZIP_DIR;
   zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
-      -x patch/* ramdisk/* *.placeholder
+      -x $BUILD_ZIP_IGNORED
   cd $BUILD_KERNEL_DIR;
 }
 
@@ -131,11 +138,13 @@ FUNC_BUILD_ZIP()
   FUNC_VERIFY_TEMPLATE;
   FUNC_CLEAN_OUTPUT;
   FUNC_BUILD;
-  FUNC_STRIP_MODULES;
   if [ "$PRODUCT_PLATFORM" == "oos" ]; then
+    FUNC_STRIP_MODULES;
     FUNC_SIGN_MODULES;
   fi;
   FUNC_COPY_KERNEL;
-  FUNC_COPY_MODULES;
+  if [ "$PRODUCT_PLATFORM" == "oos" ]; then
+    FUNC_COPY_MODULES;
+  fi;
   FUNC_BUILD_ZIP;
 )
