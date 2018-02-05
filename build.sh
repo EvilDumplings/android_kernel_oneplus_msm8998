@@ -16,10 +16,21 @@ KERNEL_MODULES=$BUILD_ZIP_DIR/modules/system/vendor/lib/modules;
 BUILD_JOB_NUMBER=`nproc --all`;
 
 
+# # # SET KERNEL ID # # #
+
+PRODUCT_NAME=primal
+PRODUCT_NAME_DISPLAY=Primal
+PRODUCT_DEVICE=oneplus5
+PRODUCT_PLATFORM=custom
+PRODUCT_VERSION=1.0.0
+
+
 # # # SET GLOBAL VARIABLES # # #
 
 export ARCH=arm64;
 export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/aarch64-linux-android-;
+
+export LOCALVERSION=-$PRODUCT_NAME_DISPLAY-$PRODUCT_VERSION
 
 
 # # # VERIFY TOOLCHAIN PRESENCE # # #
@@ -67,7 +78,7 @@ FUNC_BUILD()
 {
   mkdir -p $BUILD_KERNEL_OUT_DIR;
 
-  make O=$BUILD_KERNEL_OUT_DIR primal_oneplus5_defconfig;
+  make O=$BUILD_KERNEL_OUT_DIR ${PRODUCT_NAME}_${PRODUCT_DEVICE}_defconfig;
   make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit -1;
 }
 
@@ -107,7 +118,7 @@ FUNC_COPY_MODULES()
 FUNC_BUILD_ZIP()
 {
   cd $BUILD_ZIP_DIR;
-  zip -r9 $PRODUCT_OUT/primal-oneplus5-custom-v1.0.0.zip * \
+  zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
       -x patch/* ramdisk/* *.placeholder
   cd $BUILD_KERNEL_DIR;
 }
