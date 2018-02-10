@@ -1,39 +1,69 @@
 #!/bin/bash
+#
+# Android Kernel Build Script v2.0
+#
+# Copyright (C) 2018 Michele Beccalossi <beccalossi.michele@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+
+# # # SET KERNEL ID # # #
+
+PRODUCT_NAME=primal;
+PRODUCT_NAME_DISPLAY=Primal_Kernel;
+PRODUCT_DEVICE=oneplus5;
+PRODUCT_PLATFORM=custom;
+PRODUCT_VERSION=1.2.0;
+
+
+# # # SET TOOLS PARAMETERS # # #
+
+CROSS_COMPILE_NAME=aarch64-linux-android-4.9;
+CROSS_COMPILE_SUFFIX=aarch64-linux-android-;
+CROSS_COMPILE_HAS_GIT=true;
+CROSS_COMPILE_GIT=https://source.codeaurora.org/quic/la/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9;
+CROSS_COMPILE_BRANCH=android-framework.lnx.2.9.1.r2-rel;
+
+ZIP_DIR_GIT=https://github.com/EvilDumplings/AnyKernel2.git;
+ZIP_DIR_BRANCH=oreo-mr1;
+
 
 # # # SET LOCAL VARIABLES # # #
 
-BUILD_KERNEL_DIR=`pwd`;
+BUILD_KERNEL_DIR=$(pwd);
+BUILD_KERNEL_DIR_NAME=$(basename $BUILD_KERNEL_DIR);
 BUILD_ROOT_DIR=$(dirname $BUILD_KERNEL_DIR);
-PRODUCT_OUT=$BUILD_ROOT_DIR/out;
+PRODUCT_OUT=$BUILD_ROOT_DIR/${BUILD_KERNEL_DIR_NAME}_out;
 BUILD_KERNEL_OUT_DIR=$PRODUCT_OUT/KERNEL_OBJ;
 BUILD_ZIP_DIR=$PRODUCT_OUT/AnyKernel2;
 
-BUILD_CROSS_COMPILE=$BUILD_ROOT_DIR/aarch64-linux-android-4.9;
+BUILD_CROSS_COMPILE=$BUILD_ROOT_DIR/$CROSS_COMPILE_NAME;
+KERNEL_DEFCONFIG=${PRODUCT_NAME}_${PRODUCT_DEVICE}_defconfig;
 
 KERNEL_IMG=$BUILD_ZIP_DIR/Image.gz-dtb;
 KERNEL_MODULES=$BUILD_ZIP_DIR/modules/system/vendor/lib/modules;
 
-BUILD_JOB_NUMBER=`nproc --all`;
-HOST_ARCH=`uname -m`;
-
-
-# # # SET KERNEL ID # # #
-
-PRODUCT_NAME=primal
-PRODUCT_NAME_DISPLAY=Primal
-PRODUCT_DEVICE=oneplus5
-PRODUCT_PLATFORM=custom
-PRODUCT_VERSION=1.0.0
+BUILD_JOB_NUMBER=$(nproc --all);
+HOST_ARCH=$(uname -m);
 
 
 # # # SET GLOBAL VARIABLES # # #
 
 export ARCH=arm64;
+
 if [ "$HOST_ARCH" == "x86_64" ]; then
-  export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/aarch64-linux-android-;
+  export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/$CROSS_COMPILE_SUFFIX;
 fi;
 
-export LOCALVERSION=-$PRODUCT_NAME_DISPLAY-$PRODUCT_VERSION
+export LOCALVERSION="-${PRODUCT_NAME_DISPLAY}_v${PRODUCT_VERSION}";
 
 
 # # # VERIFY PRODUCT OUTPUT FOLDER EXISTENCE # # #
@@ -46,10 +76,11 @@ fi;
 FUNC_VERIFY_TOOLCHAIN()
 {
   if [ ! -d "$BUILD_CROSS_COMPILE" ]; then
-    git clone https://source.codeaurora.org/quic/la/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 $BUILD_CROSS_COMPILE \
-        -b android-framework.lnx.2.9.1.r2-rel;
+    git clone $CROSS_COMPILE_GIT $BUILD_CROSS_COMPILE \
+        -b $CROSS_COMPILE_BRANCH;
   else
     cd $BUILD_CROSS_COMPILE;
+    git checkout $CROSS_COMPILE_BRANCH;
     git pull;
     cd $BUILD_KERNEL_DIR;
   fi;
@@ -61,10 +92,11 @@ FUNC_VERIFY_TOOLCHAIN()
 FUNC_VERIFY_TEMPLATE()
 {
   if [ ! -d "$BUILD_ZIP_DIR" ]; then
-    git clone https://github.com/EvilDumplings/AnyKernel2.git $BUILD_ZIP_DIR \
-        -b oreo-mr1;
+    git clone $ZIP_DIR_GIT $BUILD_ZIP_DIR \
+        -b $ZIP_DIR_BRANCH;
   else
     cd $BUILD_ZIP_DIR;
+    git checkout $ZIP_DIR_BRANCH;
     git pull;
     cd $BUILD_KERNEL_DIR;
   fi;
@@ -80,7 +112,7 @@ FUNC_CLEAN_OUTPUT()
   if [ "$PRODUCT_PLATFORM" == "oos" ]; then
     rm -rf $KERNEL_MODULES/*;
   fi;
-  rm -rf $PRODUCT_OUT/*.zip;
+  rm -f $PRODUCT_OUT/*.zip;
 }
 
 
@@ -90,8 +122,10 @@ FUNC_BUILD()
 {
   mkdir $BUILD_KERNEL_OUT_DIR;
 
-  make O=$BUILD_KERNEL_OUT_DIR ${PRODUCT_NAME}_${PRODUCT_DEVICE}_defconfig;
-  make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit -1;
+  make O=$BUILD_KERNEL_OUT_DIR $KERNEL_DEFCONFIG;
+  cp -f $BUILD_KERNEL_OUT_DIR/.config $BUILD_KERNEL_DIR/arch/arm64/configs/$KERNEL_DEFCONFIG;
+
+  make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit 1;
 }
 
 
@@ -103,6 +137,7 @@ FUNC_STRIP_MODULES()
       -name "*.ko" \
       -exec ${CROSS_COMPILE}strip --strip-unneeded {} \;
 }
+
 FUNC_SIGN_MODULES()
 {
   find $BUILD_KERNEL_OUT_DIR \
@@ -113,10 +148,6 @@ FUNC_SIGN_MODULES()
 
 # # # COPY BUILD OUTPUT # # #
 
-FUNC_COPY_KERNEL()
-{
-  cp $BUILD_KERNEL_OUT_DIR/arch/arm64/boot/Image.gz-dtb $KERNEL_IMG;
-}
 FUNC_COPY_MODULES()
 {
   find $BUILD_KERNEL_OUT_DIR \
@@ -124,26 +155,31 @@ FUNC_COPY_MODULES()
       -exec cp {} $KERNEL_MODULES \;
 }
 
+FUNC_COPY_KERNEL()
+{
+  cp $BUILD_KERNEL_OUT_DIR/arch/arm64/boot/Image.gz-dtb $KERNEL_IMG;
+}
+
 
 # # # BUILD ZIP # # #
 
 FUNC_BUILD_ZIP()
 {
-  BUILD_ZIP_IGNORED="patch/* ramdisk/* *.placeholder";
-  if [ "$PRODUCT_PLATFORM" == "custom" ]; then
-    BUILD_ZIP_IGNORED="modules/* $BUILD_ZIP_IGNORED";
-  fi;
-  
   cd $BUILD_ZIP_DIR;
-  zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
-      -x $BUILD_ZIP_IGNORED
+  if [ "$PRODUCT_PLATFORM" == "oos" ]; then
+    zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
+        -x patch/\* ramdisk/\*;
+  else
+    zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
+        -x modules/\* patch/\* ramdisk/\*;
+  fi;
   cd $BUILD_KERNEL_DIR;
 }
 
 # MAIN FUNCTION
-rm -f $PRODUCT_OUT/build.log
+rm -f $PRODUCT_OUT/build.log;
 (
-  if [ "$HOST_ARCH" == "x86_64" ]; then
+  if [ "$HOST_ARCH" == "x86_64" ] && [ "$CROSS_COMPILE_HAS_GIT" == true ]; then
     FUNC_VERIFY_TOOLCHAIN;
   fi;
   FUNC_VERIFY_TEMPLATE;
@@ -152,10 +188,8 @@ rm -f $PRODUCT_OUT/build.log
   if [ "$PRODUCT_PLATFORM" == "oos" ]; then
     FUNC_STRIP_MODULES;
     FUNC_SIGN_MODULES;
-  fi;
-  FUNC_COPY_KERNEL;
-  if [ "$PRODUCT_PLATFORM" == "oos" ]; then
     FUNC_COPY_MODULES;
   fi;
+  FUNC_COPY_KERNEL;
   FUNC_BUILD_ZIP;
-) 2>&1 | tee $PRODUCT_OUT/build.log
+) 2>&1 | tee $PRODUCT_OUT/build.log;
