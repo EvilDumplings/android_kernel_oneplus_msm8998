@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Android Kernel Build Script v2.0
+# Android Kernel Build Script v2.1
 #
 # Copyright (C) 2018 Michele Beccalossi <beccalossi.michele@gmail.com>
 #
@@ -17,22 +17,24 @@
 
 # # # SET KERNEL ID # # #
 
-PRODUCT_NAME=primal;
 PRODUCT_NAME_DISPLAY=Primal_Kernel;
+PRODUCT_VERSION=1.2.1;
+
+PRODUCT_NAME=primal;
 PRODUCT_DEVICE=oneplus5;
 PRODUCT_PLATFORM=custom;
-PRODUCT_VERSION=1.2.0;
 
 
 # # # SET TOOLS PARAMETERS # # #
 
 CROSS_COMPILE_NAME=aarch64-linux-android-4.9;
 CROSS_COMPILE_SUFFIX=aarch64-linux-android-;
+
+USE_CCACHE=true;
+
 CROSS_COMPILE_HAS_GIT=true;
 CROSS_COMPILE_GIT=https://source.codeaurora.org/quic/la/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9;
 CROSS_COMPILE_BRANCH=android-framework.lnx.2.9.1.r2-rel;
-
-USE_CCACHE=true;
 
 ZIP_DIR_GIT=https://github.com/EvilDumplings/AnyKernel2.git;
 ZIP_DIR_BRANCH=oreo-mr1;
@@ -65,7 +67,7 @@ if [ "$HOST_ARCH" == "x86_64" ]; then
   export CROSS_COMPILE=$BUILD_CROSS_COMPILE/bin/$CROSS_COMPILE_SUFFIX;
 fi;
 
-export LOCALVERSION="-${PRODUCT_NAME_DISPLAY}_v${PRODUCT_VERSION}";
+export LOCALVERSION=-${PRODUCT_NAME_DISPLAY}_v$PRODUCT_VERSION;
 
 
 # # # VERIFY PRODUCT OUTPUT FOLDER EXISTENCE # # #
@@ -172,12 +174,14 @@ FUNC_COPY_KERNEL()
 
 FUNC_BUILD_ZIP()
 {
+  ZIP_NAME=$PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip
+
   cd $BUILD_ZIP_DIR;
   if [ "$PRODUCT_PLATFORM" == "oos" ]; then
-    zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
+    zip -r9 $ZIP_NAME * \
         -x patch/\* ramdisk/\*;
   else
-    zip -r9 $PRODUCT_OUT/$PRODUCT_NAME-$PRODUCT_DEVICE-$PRODUCT_PLATFORM-v$PRODUCT_VERSION.zip * \
+    zip -r9 $ZIP_NAME * \
         -x modules/\* patch/\* ramdisk/\*;
   fi;
   cd $BUILD_KERNEL_DIR;
@@ -192,11 +196,11 @@ rm -f $PRODUCT_OUT/build.log;
   FUNC_VERIFY_TEMPLATE;
   FUNC_CLEAN_OUTPUT;
   FUNC_BUILD;
+  FUNC_COPY_KERNEL;
   if [ "$PRODUCT_PLATFORM" == "oos" ]; then
     FUNC_STRIP_MODULES;
     FUNC_SIGN_MODULES;
     FUNC_COPY_MODULES;
   fi;
-  FUNC_COPY_KERNEL;
   FUNC_BUILD_ZIP;
 ) 2>&1 | tee $PRODUCT_OUT/build.log;
