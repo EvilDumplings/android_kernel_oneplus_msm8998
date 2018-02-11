@@ -32,6 +32,8 @@ CROSS_COMPILE_HAS_GIT=true;
 CROSS_COMPILE_GIT=https://source.codeaurora.org/quic/la/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9;
 CROSS_COMPILE_BRANCH=android-framework.lnx.2.9.1.r2-rel;
 
+USE_CCACHE=true;
+
 ZIP_DIR_GIT=https://github.com/EvilDumplings/AnyKernel2.git;
 ZIP_DIR_BRANCH=oreo-mr1;
 
@@ -125,7 +127,12 @@ FUNC_BUILD()
   make O=$BUILD_KERNEL_OUT_DIR $KERNEL_DEFCONFIG;
   cp -f $BUILD_KERNEL_OUT_DIR/.config $BUILD_KERNEL_DIR/arch/arm64/configs/$KERNEL_DEFCONFIG;
 
-  make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit 1;
+  if [ "$USE_CCACHE" == true ]; then
+    make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER \
+    CC="ccache ${CROSS_COMPILE}gcc" CPP="ccache ${CROSS_COMPILE}gcc -E" || exit 1;
+  else
+    make O=$BUILD_KERNEL_OUT_DIR -j$BUILD_JOB_NUMBER || exit 1;
+  fi;
 }
 
 
