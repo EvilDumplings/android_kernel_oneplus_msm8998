@@ -32,9 +32,6 @@
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 #include <linux/regulator/consumer.h>
 
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
-#include <sound/sounddebug.h>
-
 #define I2C_RETRIES 50
 #define I2C_RETRY_DELAY 5 /* ms */
 /* TODO: remove genregs usage? */
@@ -125,10 +122,6 @@ static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol);
 static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol);
-
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
-int testLogOn = 0;
-EXPORT_SYMBOL_GPL(testLogOn);
 
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance);
@@ -250,37 +243,6 @@ r_c_err:
 
 static struct device_attribute tfa98xx_state_attr =
      __ATTR(calibra, 0444, tfa98xx_state_show, tfa98xx_state_store);
-
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-05, add for debug*/
-static ssize_t tfa98xx_Log_state_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-    pr_err("%s",__func__);
-
-    if (sysfs_streq(buf, "LogOn"))
-    {
-        testLogOn = 1;
-    }
-    else if(sysfs_streq(buf, "LogOff"))
-    {
-        testLogOn = 0;
-    }
-    else
-    {
-        testLogOn = 0;
-        count = -EINVAL;
-    }
-    return count;
-}
-
-static ssize_t tfa98xx_Log_state_show(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-    return 0;
-}
-
-static struct device_attribute tfa98xx_Log_state_attr =
-     __ATTR(Log, S_IWUSR|S_IRUGO, tfa98xx_Log_state_show, tfa98xx_Log_state_store);
 
 
 /* Wrapper for tfa start */
@@ -3533,11 +3495,6 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
     if(ret < 0)
     {
         pr_err("%s sysfs_create_file tfa98xx_state_attr err.",__func__);
-    }
-	ret = sysfs_create_file(&i2c->dev.kobj, &tfa98xx_Log_state_attr.attr);
-    if(ret < 0)
-    {
-        pr_err("%s sysfs_create_file tfa98xx_Log_state_attr err.",__func__);
     }
 
 	return 0;
