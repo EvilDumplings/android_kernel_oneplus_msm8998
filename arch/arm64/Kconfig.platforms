@@ -184,4 +184,9 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config VENDOR_ONEPLUS
+	bool "OnePlus A500x & A501x"
+	help
+	  This enables support for OnePlus A500x & A501x
+
 endmenu
