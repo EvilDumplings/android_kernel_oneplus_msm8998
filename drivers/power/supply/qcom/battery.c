@@ -443,6 +443,9 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 	if (!chip->main_psy)
 		return 0;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	pr_info("total_fcc_ua=%d\n", total_fcc_ua);
+#endif
 	if (chip->pl_mode == POWER_SUPPLY_PL_NONE
 	    || get_effective_result_locked(chip->pl_disable_votable)) {
 		pval.intval = total_fcc_ua;
@@ -525,6 +528,9 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 	struct pl_data *chip = data;
 	union power_supply_propval pval = {0, };
 	int rc = 0;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	pr_info("%s,fv_uv=%d\n", __func__, fv_uv);
+#endif
 
 	if (fv_uv < 0)
 		return 0;
@@ -712,8 +718,13 @@ static int pl_disable_vote_callback(struct votable *votable,
 		rerun_election(chip->fv_votable);
 	}
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	pr_info("parallel charging %s\n",
+		   pl_disable ? "disabled" : "enabled");
+#else
 	pl_dbg(chip, PR_PARALLEL, "parallel charging %s\n",
 		   pl_disable ? "disabled" : "enabled");
+#endif
 
 	return 0;
 }

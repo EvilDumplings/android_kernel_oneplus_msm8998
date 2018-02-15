@@ -283,6 +283,7 @@ static void update_cpu_freq(void)
 
 static void soc_mitigate(struct work_struct *work)
 {
+#ifndef CONFIG_VENDOR_ONEPLUS
 	if (bcl_hotplug_enabled)
 		queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
 	update_cpu_freq();
@@ -290,10 +291,26 @@ static void soc_mitigate(struct work_struct *work)
 
 static int get_and_evaluate_battery_soc(void)
 {
+#endif
 	static struct power_supply *batt_psy;
 	union power_supply_propval ret = {0,};
 	int battery_percentage;
 	enum bcl_threshold_state prev_soc_state;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	static struct power_supply *usb_psy;
+	int usb_state;
+	bool is_usb_present;
+
+	if (!usb_psy)
+		usb_psy = power_supply_get_by_name("usb");
+	if (usb_psy) {
+		usb_state = power_supply_get_property(usb_psy,
+						      POWER_SUPPLY_PROP_PRESENT,
+						      &ret);
+		if (usb_state == 0)
+			is_usb_present = ret.intval;
+	}
+#endif
 
 	if (!batt_psy)
 		batt_psy = power_supply_get_by_name("battery");
@@ -305,16 +322,42 @@ static int get_and_evaluate_battery_soc(void)
 		pr_debug("Battery SOC reported:%d", battery_soc_val);
 		trace_bcl_sw_mitigation("SoC reported", battery_soc_val);
 		prev_soc_state = bcl_soc_state;
+#ifdef CONFIG_VENDOR_ONEPLUS
+		pr_debug("is_usb_present:%d", is_usb_present);
+		if (is_usb_present)
+			bcl_soc_state = BCL_HIGH_THRESHOLD;
+		else
+			bcl_soc_state = (battery_soc_val <= soc_low_threshold) ?
+						BCL_LOW_THRESHOLD : BCL_HIGH_THRESHOLD;
+#else
 		bcl_soc_state = (battery_soc_val <= soc_low_threshold) ?
 					BCL_LOW_THRESHOLD : BCL_HIGH_THRESHOLD;
+#endif
 		if (bcl_soc_state == prev_soc_state)
+#ifdef CONFIG_VENDOR_ONEPLUS
+			return;
+#else
 			return NOTIFY_OK;
+#endif
 		trace_bcl_sw_mitigation_event(
 			(bcl_soc_state == BCL_LOW_THRESHOLD)
 			? "trigger SoC mitigation"
 			: "clear SoC mitigation");
+#ifdef CONFIG_VENDOR_ONEPLUS
+
+		if (bcl_hotplug_enabled)
+			queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
+		update_cpu_freq();
+	}
+}
+
+static int get_and_evaluate_battery_soc(void)
+{
+	schedule_work(&gbcl->soc_mitig_work);
+#else
 		schedule_work(&gbcl->soc_mitig_work);
 	}
+#endif
 	return NOTIFY_OK;
 }
 

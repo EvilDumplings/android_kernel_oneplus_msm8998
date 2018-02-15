@@ -426,6 +426,9 @@ struct fg_chip {
 	bool			profile_available;
 	bool			profile_loaded;
 	bool			battery_missing;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	bool			use_external_fg;
+#endif
 	bool			fg_restarting;
 	bool			charge_full;
 	bool			recharge_soc_adjusted;
