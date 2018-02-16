@@ -3444,10 +3444,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else if (chip->use_external_fg && external_fg
 				&& external_fg->get_average_current){
 			pval->intval = external_fg->get_battery_temperature();
-#ifdef	CONFIG_OP_DEBUG_CHG
-			if (pval->intval > 650)
-				pval->intval = 650;
-#endif
 			}
 		else
 			pval->intval = -400;

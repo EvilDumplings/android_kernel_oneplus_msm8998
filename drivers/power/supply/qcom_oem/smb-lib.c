@@ -5239,7 +5239,6 @@ static int set_dash_charger_present(int status)
 
 	return 0;
 }
-#ifndef CONFIG_OP_DEBUG_CHG
 static void op_check_charge_timeout(struct smb_charger *chg)
 {
 	static int batt_status, count;
@@ -5260,7 +5259,6 @@ static void op_check_charge_timeout(struct smb_charger *chg)
 		chg->time_out = true;
 	}
 }
-#endif
 static int get_prop_batt_present(struct smb_charger *chg)
 {
 	int rc;
@@ -6203,9 +6201,7 @@ static void op_heartbeat_work(struct work_struct *work)
 	static int batt_temp, vbat_mv;
 	union power_supply_propval vbus_val;
 	int rc;
-#ifndef CONFIG_OP_DEBUG_CHG
 	op_check_charge_timeout(chg);
-#endif
 	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
 	if (rc < 0) {
 		pr_err("failed to read usb_voltage rc=%d\n", rc);
@@ -6275,16 +6271,6 @@ static void op_heartbeat_work(struct work_struct *work)
 			&& !chg->time_out) {
 		op_check_battery_temp(chg);
 	}
-#ifdef	CONFIG_OP_DEBUG_CHG
-	chg->dump_count++;
-	if (chg->dump_count == 600) {
-		chg->dump_count = 0;
-		if ((get_prop_batt_current_now(chg) / 1000) > 0) {
-			op_dump_regs(chg);
-			aging_test_check_aicl(chg);
-		}
-	}
-#else
 	if (chg->is_aging_test) {
 		chg->dump_count++;
 		if (chg->dump_count == 600) {
@@ -6296,7 +6282,6 @@ static void op_heartbeat_work(struct work_struct *work)
 		}
 	}
 
-#endif
 out:
 		smblib_dbg(chg, PR_OP_DEBUG, "CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
 				get_prop_batt_capacity(chg),
