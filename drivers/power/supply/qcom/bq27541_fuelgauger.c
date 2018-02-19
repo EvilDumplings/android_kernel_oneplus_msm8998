@@ -860,27 +860,6 @@ static int bq27541_remaining_capacity(struct bq27541_device_info *di)
 	return cap;
 }
 
-static int bq27541_batt_health(struct bq27541_device_info *di)
-{
-	int ret;
-	int health = 0;
-
-	if (di->allow_reading) {
-		ret = bq27541_read(di->cmd_addr.reg_helth,
-				&health, 0, di);
-		if (ret) {
-			pr_err("error reading health\n");
-			return ret;
-		}
-		if (di->device_type == DEVICE_BQ27411)
-			di->health_pre = (health & 0xFF);
-		else
-			di->health_pre = health;
-	}
-
-	return di->health_pre;
-}
-
 static int bq27541_get_battery_mvolts(void)
 {
 	return bq27541_battery_voltage(bq27541_di);
@@ -891,47 +870,10 @@ static int bq27541_get_batt_remaining_capacity(void)
 	return bq27541_remaining_capacity(bq27541_di);
 }
 
-static int bq27541_get_batt_health(void)
-{
-	return bq27541_batt_health(bq27541_di);
-}
-static int bq27541_get_batt_bq_soc(void)
-{
-	int soc;
-
-	bq27541_di->disable_calib_soc = true;
-	soc = bq27541_battery_soc(bq27541_di, 0);
-	bq27541_di->disable_calib_soc = false;
-	return soc;
-}
 static int bq27541_get_battery_temperature(void)
 {
 	return bq27541_battery_temperature(bq27541_di);
 }
-static bool bq27541_is_battery_present(void)
-{
-	return true;
-}
-
-static bool bq27541_is_battery_temp_within_range(void)
-{
-	return true;
-}
-
-static bool bq27541_is_battery_id_valid(void)
-{
-	return true;
-}
-
-#ifdef CONFIG_GAUGE_BQ27411
-static int bq27541_get_device_type(void)
-{
-	if (bq27541_di)
-		return bq27541_di->device_type;
-
-	return 0;
-}
-#endif
 
 static int bq27541_get_battery_soc(void)
 {
@@ -941,49 +883,6 @@ static int bq27541_get_battery_soc(void)
 static int bq27541_get_average_current(void)
 {
 	return bq27541_average_current(bq27541_di);
-}
-
-static int bq27541_set_allow_reading(int enable)
-{
-	if (bq27541_di)
-		bq27541_di->allow_reading = enable;
-
-	return 0;
-}
-
-static int bq27541_set_lcd_off_status(int off)
-{
-	int soc, ret;
-
-	pr_info("off=%d\n", off);
-	if (bq27541_di) {
-		if (off) {
-#ifdef CONFIG_GAUGE_BQ27411
-			ret = bq27541_read(bq27541_di->cmd_addr.reg_soc,
-					&soc, 0, bq27541_di);
-#else
-			ret = bq27541_read(
-			BQ27541_REG_SOC, &soc, 0, bq27541_di);
-#endif
-			if (ret) {
-				bq27541_di->lcd_off_delt_soc = 0;
-				pr_err("soc error reading ret=%d,soc%d\n",
-					ret, soc);
-			} else {
-				bq27541_di->lcd_off_delt_soc =
-					bq27541_di->soc_pre-soc;
-				pr_info("lcd_off_delt_soc:%d,soc=%d,soc_pre=%d\n",
-				bq27541_di->lcd_off_delt_soc, soc,
-						bq27541_di->soc_pre);
-			}
-			get_current_time(&bq27541_di->lcd_off_time);
-			bq27541_di->lcd_is_off = true;
-		} else {
-			bq27541_di->lcd_is_off = false;
-			bq27541_di->lcd_off_delt_soc = 0;
-		}
-	}
-	return 0;
 }
 
 static int bq27541_get_fastchg_started_status(bool fastchg_started_status)
@@ -997,20 +896,10 @@ static int bq27541_get_fastchg_started_status(bool fastchg_started_status)
 static struct external_battery_gauge bq27541_batt_gauge = {
 	.get_battery_mvolts     = bq27541_get_battery_mvolts,
 	.get_battery_temperature    = bq27541_get_battery_temperature,
-	.is_battery_present     = bq27541_is_battery_present,
-	.is_battery_temp_within_range   = bq27541_is_battery_temp_within_range,
-	.is_battery_id_valid        = bq27541_is_battery_id_valid,
 	.get_batt_remaining_capacity
 		= bq27541_get_batt_remaining_capacity,
-	.get_batt_health        = bq27541_get_batt_health,
-	.get_batt_bq_soc		= bq27541_get_batt_bq_soc,
-#ifdef CONFIG_GAUGE_BQ27411
-	.get_device_type            = bq27541_get_device_type,
-#endif
 	.get_battery_soc            = bq27541_get_battery_soc,
 	.get_average_current        = bq27541_get_average_current,
-	.set_allow_reading           = bq27541_set_allow_reading,
-	.set_lcd_off_status         = bq27541_set_lcd_off_status,
 	.fast_chg_started_status    = bq27541_get_fastchg_started_status,
 };
 #define BATTERY_SOC_UPDATE_MS 6000
@@ -1059,17 +948,12 @@ static void update_battery_soc_work(struct work_struct *work)
 			return;
 		if (bq27541_di->set_smoothing)
 			return;
-		if (!bq27541_di->allow_reading)
-			bq27541_set_allow_reading(true);
-		return;
 	}
-	bq27541_set_allow_reading(true);
 	bq27541_get_battery_mvolts();
 	bq27541_get_average_current();
 	bq27541_get_battery_temperature();
 	bq27541_get_battery_soc();
 	bq27541_get_batt_remaining_capacity();
-	bq27541_set_allow_reading(false);
 	schedule_delayed_work(&bq27541_di->battery_soc_work,
 			msecs_to_jiffies(BATTERY_SOC_UPDATE_MS));
 }
@@ -1113,11 +997,9 @@ static void bq_modify_soc_smooth_parameter(struct work_struct *work)
 
 	di = container_of(work, struct bq27541_device_info,
 			modify_soc_smooth_parameter.work);
-	bq27541_set_allow_reading(false);
 	di->set_smoothing = true;
 	bq27411_modify_soc_smooth_parameter(di, true);
 	di->set_smoothing = false;
-	bq27541_set_allow_reading(true);
 }
 
 static bool check_bat_present(struct bq27541_device_info *di)
@@ -1331,9 +1213,7 @@ static struct platform_device this_device = {
 static void update_pre_capacity_func(struct work_struct *w)
 {
 	pr_info("enter\n");
-	bq27541_set_allow_reading(true);
 	bq27541_battery_soc(bq27541_di, update_pre_capacity_data.suspend_time);
-	bq27541_set_allow_reading(false);
 	wake_unlock(&bq27541_di->update_soc_wake_lock);
 	pr_info("exit\n");
 }
