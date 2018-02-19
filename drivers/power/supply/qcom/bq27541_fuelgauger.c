@@ -885,6 +885,14 @@ static int bq27541_get_average_current(void)
 	return bq27541_average_current(bq27541_di);
 }
 
+static int bq27541_set_allow_reading(int enable)
+{
+	if (bq27541_di)
+		bq27541_di->allow_reading = enable;
+
+	return 0;
+}
+
 static int bq27541_get_fastchg_started_status(bool fastchg_started_status)
 {
 	if (bq27541_di)
@@ -900,6 +908,7 @@ static struct external_battery_gauge bq27541_batt_gauge = {
 		= bq27541_get_batt_remaining_capacity,
 	.get_battery_soc            = bq27541_get_battery_soc,
 	.get_average_current        = bq27541_get_average_current,
+	.set_allow_reading           = bq27541_set_allow_reading,
 	.fast_chg_started_status    = bq27541_get_fastchg_started_status,
 };
 #define BATTERY_SOC_UPDATE_MS 6000
@@ -948,12 +957,17 @@ static void update_battery_soc_work(struct work_struct *work)
 			return;
 		if (bq27541_di->set_smoothing)
 			return;
+		if (!bq27541_di->allow_reading)
+			bq27541_set_allow_reading(true);
+		return;
 	}
+	bq27541_set_allow_reading(true);
 	bq27541_get_battery_mvolts();
 	bq27541_get_average_current();
 	bq27541_get_battery_temperature();
 	bq27541_get_battery_soc();
 	bq27541_get_batt_remaining_capacity();
+	bq27541_set_allow_reading(false);
 	schedule_delayed_work(&bq27541_di->battery_soc_work,
 			msecs_to_jiffies(BATTERY_SOC_UPDATE_MS));
 }
@@ -997,9 +1011,11 @@ static void bq_modify_soc_smooth_parameter(struct work_struct *work)
 
 	di = container_of(work, struct bq27541_device_info,
 			modify_soc_smooth_parameter.work);
+	bq27541_set_allow_reading(false);
 	di->set_smoothing = true;
 	bq27411_modify_soc_smooth_parameter(di, true);
 	di->set_smoothing = false;
+	bq27541_set_allow_reading(true);
 }
 
 static bool check_bat_present(struct bq27541_device_info *di)
@@ -1213,7 +1229,9 @@ static struct platform_device this_device = {
 static void update_pre_capacity_func(struct work_struct *w)
 {
 	pr_info("enter\n");
+	bq27541_set_allow_reading(true);
 	bq27541_battery_soc(bq27541_di, update_pre_capacity_data.suspend_time);
+	bq27541_set_allow_reading(false);
 	wake_unlock(&bq27541_di->update_soc_wake_lock);
 	pr_info("exit\n");
 }
