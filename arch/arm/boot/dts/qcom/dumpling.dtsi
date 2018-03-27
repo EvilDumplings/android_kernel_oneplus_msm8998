@@ -135,7 +135,7 @@
 		fp-gpio-reset = <&tlmm 75 0x00>;
 		fp-gpio-enable = <&tlmm 65 0x00>;
 		pinctrl-names = "fp_en_init", "fp_dis_init";
-		pinctrl-0 = <&goodixfp_enable_init>;
+		pinctrl-0 = <&goodixfp_enable_init &goodixfp_irq_init>;
 		pinctrl-1 = <&goodixfp_disable_init>;
 		oem,dumpling;
 	};
@@ -201,6 +201,10 @@
 				"pmx_tri_state_key_suspend";
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
+	};
+
+	qcom,qbt1000 {
+		status = "disabled";
 	};
 };
 
@@ -548,6 +552,20 @@
 		};
 	};
 
+	goodixfp_irq_init: goodixfp_irq_init {
+		mux {
+			pins = "gpio121";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio121";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
 	fastchg_active: fastchg_active {
 		mux {
 			pins = "gpio96";
@@ -622,7 +640,7 @@
 		config {
 			pins = "gpio80";
 			drive-strength = <2>;
-			bias-pull-down;
+			bias-disabled;
 		};
 	};
 
@@ -1680,9 +1698,11 @@
 };
 
 &i2c_6 {
-	status = "ok";
-
 	nq@28 {
+		status = "disabled";
+	};
+
+	pn5xx@28 {
 		compatible = "nxp,pn544";
 		reg = <0x28>;
 		nxp,pn544-irq = <&tlmm 92 0x00>;
@@ -1760,15 +1780,6 @@
 
 &snd_9335 {
 	qcom,mbhc-audio-jack-type = "4-pole-jack";
-};
-
-&slim_aud {
-	tasha_codec {
-		qcom,cdc-micbias1-mv = <1800>;
-		qcom,cdc-micbias2-mv = <2700>;
-		qcom,cdc-micbias3-mv = <1800>;
-		qcom,cdc-micbias4-mv = <1800>;
-	};
 };
 
 &pm8998_vadc {
@@ -1977,4 +1988,25 @@
 
 &pm8005_gpios {
 	status = "disabled";
+};
+
+&firmware {
+	android {
+		compatible = "android,firmware";
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				status = "disabled";
+			};
+
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,verify";
+				status = "ok";
+			};
+		};
+	};
 };
