@@ -28,6 +28,7 @@ obj-$(CONFIG_USB_EMXX)		+= emxx_udc/
 obj-$(CONFIG_SPEAKUP)		+= speakup/
 obj-$(CONFIG_MFD_NVEC)		+= nvec/
 obj-$(CONFIG_STAGING_RDMA)	+= rdma/
+obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0/
 obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_STAGING_BOARD)	+= board/
 obj-$(CONFIG_WIMAX_GDM72XX)	+= gdm72xx/
